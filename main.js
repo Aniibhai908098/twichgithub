@@ -101,3 +101,143 @@ class TwitchAPI {
 
 // Export as singleton
 window.twitchAPI = new TwitchAPI();
+
+// Add UI Handler class
+class TwitchDownloader {
+    constructor() {
+        this.initializeElements();
+        this.attachEventListeners();
+    }
+
+    initializeElements() {
+        this.urlInput = document.getElementById('clipUrl');
+        this.submitButton = document.getElementById('submitBtn');
+        this.statusMessage = document.getElementById('statusMsg');
+        this.clipInfoSection = document.getElementById('clipInfoSection');
+        this.qualitySection = document.getElementById('qualitySection');
+    }
+
+    attachEventListeners() {
+        this.submitButton.addEventListener('click', () => this.handleSubmit());
+        this.urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.handleSubmit();
+        });
+    }
+
+    async handleSubmit() {
+        const url = this.urlInput.value.trim();
+        if (!url) {
+            this.showStatus('Please enter a Twitch clip URL', 'error');
+            return;
+        }
+
+        try {
+            this.setLoading(true);
+            this.showStatus('Fetching clip information...', 'info');
+            
+            const clipInfo = await window.twitchAPI.getClipInfo(url);
+            this.displayClipInfo(clipInfo);
+            this.showStatus('Clip information loaded successfully', 'success');
+        } catch (error) {
+            this.showStatus(error.message, 'error');
+            this.clearClipInfo();
+        } finally {
+            this.setLoading(false);
+        }
+    }
+
+    displayClipInfo(clipInfo) {
+        this.clipInfoSection.innerHTML = `
+            <div class="clip-info">
+                <img src="${clipInfo.thumbnail}" alt="${clipInfo.title}" class="clip-thumbnail">
+                <div class="clip-details">
+                    <h2>${clipInfo.title}</h2>
+                    <p>Channel: ${clipInfo.broadcaster}</p>
+                    <p>Game: ${clipInfo.game}</p>
+                    <p>Duration: ${this.formatDuration(clipInfo.duration)}</p>
+                    <p>Views: ${this.formatNumber(clipInfo.viewCount)}</p>
+                </div>
+            </div>
+        `;
+
+        this.displayQualityOptions(clipInfo.qualities);
+    }
+
+    displayQualityOptions(qualities) {
+        const qualityButtons = qualities.map(quality => `
+            <button class="quality-btn" data-url="${quality.url}">
+                <span class="quality-label">${quality.quality}p</span>
+                <span class="quality-fps">${quality.fps} FPS</span>
+            </button>
+        `).join('');
+
+        this.qualitySection.innerHTML = `
+            <div class="quality-container">
+                <h3>Select Quality</h3>
+                <div class="quality-options">
+                    ${qualityButtons}
+                </div>
+            </div>
+        `;
+
+        // Add click handlers to quality buttons
+        this.qualitySection.querySelectorAll('.quality-btn').forEach(button => {
+            button.addEventListener('click', () => this.handleDownload(button.dataset.url));
+        });
+    }
+
+    async handleDownload(url) {
+        try {
+            this.showStatus('Starting download...', 'info');
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `twitch-clip-${Date.now()}.mp4`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(downloadUrl);
+
+            this.showStatus('Download started successfully', 'success');
+        } catch (error) {
+            this.showStatus('Download failed. Please try again.', 'error');
+        }
+    }
+
+    setLoading(isLoading) {
+        this.submitButton.disabled = isLoading;
+        if (isLoading) {
+            this.submitButton.textContent = 'Loading...';
+        } else {
+            this.submitButton.textContent = 'Download';
+        }
+    }
+
+    showStatus(message, type) {
+        this.statusMessage.textContent = message;
+        this.statusMessage.className = `status-message ${type}`;
+    }
+
+    clearClipInfo() {
+        this.clipInfoSection.innerHTML = '';
+        this.qualitySection.innerHTML = '';
+    }
+
+    formatDuration(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    formatNumber(number) {
+        return new Intl.NumberFormat().format(number);
+    }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.twitchDownloader = new TwitchDownloader();
+});
