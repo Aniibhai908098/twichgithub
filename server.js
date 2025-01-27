@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -7,14 +6,17 @@ const morgan = require('morgan');
 const helmet = require('helmet');
 const routes = require('./routes');
 
-app.use('/api', routes);
-
 // Initialize express app
 const app = express();
 
 // Environment variables
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(morgan('dev'));
 
 // Security middleware
 app.use(helmet({
@@ -31,15 +33,12 @@ app.use(helmet({
 
 // Rate limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     message: 'Too many requests from this IP, please try again later.'
 });
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(morgan('dev'));
+// Apply rate limiting to API routes
 app.use('/api', limiter);
 
 // Static files
@@ -69,7 +68,6 @@ app.use((req, res) => {
     });
 });
 
-// Start server
 app.listen(PORT, () => {
     console.log(`Server running in ${NODE_ENV} mode on port ${PORT}`);
 });
