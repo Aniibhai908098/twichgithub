@@ -7,6 +7,8 @@ const morgan = require('morgan');
 const helmet = require('helmet');
 const routes = require('./routes');
 
+app.use('/api', routes);
+
 // Initialize express app
 const app = express();
 
