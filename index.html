@@ -24,7 +24,19 @@
         </header>
 
         <main class="main-content">
-            <section id="urlInputSection" class="url-section"></section>
+            <section id="urlInputSection" class="url-section">
+                <div class="input-container">
+                    <input 
+                        type="text" 
+                        id="clipUrl" 
+                        class="url-input" 
+                        placeholder="Paste Twitch clip URL here..."
+                        aria-label="Twitch clip URL">
+                    <button id="submitBtn" class="submit-button">Download</button>
+                </div>
+                <p id="statusMsg" class="status-message"></p>
+            </section>
+            
             <section id="clipInfoSection" class="clip-section"></section>
             <section id="qualitySection" class="quality-section"></section>
         </main>
